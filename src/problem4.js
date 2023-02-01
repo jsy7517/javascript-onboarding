@@ -1,7 +1,5 @@
 const ALPHABET_REGEX = /[a-zA-Z]/;
-const [CHARCODE_A, CHARCODE_Z, CHARCODE_a, CHARCODE_z] = 'AZaz'
-  .split('')
-  .map((_, idx) => 'AZaz'.charCodeAt(idx));
+const [CHARCODE_A, CHARCODE_Z] = 'AZ'.split('').map(c => c.charCodeAt(0));
 
 function getFrogTranslatedWord(word) {
   return word.split('').reduce((prevResult, c) => {
@@ -18,17 +16,15 @@ function isAlphabet(c) {
 }
 
 function frogTranslate(c) {
-  const charCode = c.charCodeAt(0);
+  const charCode = c.toUpperCase().charCodeAt(0);
+  const charCodeDiff = CHARCODE_A + CHARCODE_Z - charCode;
+  const result = String.fromCharCode(charCodeDiff);
 
-  if (isLowerCase(charCode)) {
-    return String.fromCharCode(CHARCODE_a + CHARCODE_z - charCode);
-  }
-
-  return String.fromCharCode(CHARCODE_A + CHARCODE_Z - charCode);
+  return isLowerCase(c) ? result.toLowerCase() : result;
 }
 
-function isLowerCase(alphabetCharCode) {
-  return alphabetCharCode >= CHARCODE_a;
+function isLowerCase(alphabet) {
+  return alphabet >= 'a';
 }
 
 function problem4(word) {

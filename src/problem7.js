@@ -1,17 +1,17 @@
 function getRecommendedFriendList({ user, friends, visitors }) {
   const friendInfo = getFriendInfo(friends);
   const recommendScoreInfo = getRecommendScoreInfo({
-    user,
+    userId: user,
     friendInfo,
     visitors,
   });
   const userFriends = friendInfo[user] ?? [];
 
   return Object.entries(recommendScoreInfo)
-    .filter(([id, _]) => !userFriends.includes(id))
+    .filter(([id]) => !userFriends.includes(id))
     .filter(([_, score]) => score > 0)
     .sort(compare)
-    .map(([id, _]) => id)
+    .map(([id]) => id)
     .slice(0, 5);
 }
 
@@ -34,52 +34,59 @@ function addFriend({ userId, friendId }, friendInfo) {
   }
 }
 
-function getRecommendScoreInfo({ user, friendInfo, visitors }) {
+function getRecommendScoreInfo({ userId, friendInfo, visitors }) {
   const recommendScoreInfo = {};
 
-  calcRecommendScore(
-    { data: { user, friendInfo }, type: 'FRIENDS' },
-    recommendScoreInfo,
-  );
-  calcRecommendScore(
-    { data: { user, visitors }, type: 'VISITORS' },
-    recommendScoreInfo,
-  );
+  calcRecommendScoreByFriends({ userId, friendInfo, recommendScoreInfo });
+  calcRecommendScoreByVisitors({ userId, visitors, recommendScoreInfo });
 
   return recommendScoreInfo;
 }
 
-function calcRecommendScore({ data, type }, recommendScoreInfo) {
-  if (type === 'FRIENDS') {
-    const { user, friendInfo } = data;
-    const userFriends = friendInfo[user] ?? [];
+function calcRecommendScoreByFriends({
+  userId,
+  friendInfo,
+  recommendScoreInfo,
+}) {
+  const userFriends = friendInfo[userId] ?? [];
 
-    Object.entries(friendInfo).forEach(([userId, friends]) => {
-      friends.forEach((friendId) => {
-        if (userId !== user && userFriends.includes(friendId)) {
-          if (recommendScoreInfo[userId]) {
-            recommendScoreInfo[userId] += 10;
+  Object.entries(friendInfo)
+    .filter(([id]) => isNotUser(id, userId))
+    .forEach(([id, friends]) => {
+      friends
+        .filter(friendId => isTogetherKnowFriend(userFriends, friendId))
+        .forEach(_ => {
+          if (recommendScoreInfo[id]) {
+            recommendScoreInfo[id] += 10;
           } else {
-            recommendScoreInfo[userId] = 10;
+            recommendScoreInfo[id] = 10;
           }
-        }
-      });
+        });
     });
-  }
+}
 
-  if (type === 'VISITORS') {
-    const { user, visitors } = data;
+function isNotUser(id, userId) {
+  return id !== userId;
+}
 
-    visitors.forEach((visitorId) => {
-      if (visitorId !== user) {
-        if (recommendScoreInfo[visitorId]) {
-          recommendScoreInfo[visitorId]++;
-        } else {
-          recommendScoreInfo[visitorId] = 1;
-        }
+function isTogetherKnowFriend(userFriends, friendId) {
+  return userFriends.includes(friendId);
+}
+
+function calcRecommendScoreByVisitors({
+  userId,
+  visitors,
+  recommendScoreInfo,
+}) {
+  visitors
+    .filter(visitorId => isNotUser(visitorId, userId))
+    .forEach(visitorId => {
+      if (recommendScoreInfo[visitorId]) {
+        recommendScoreInfo[visitorId]++;
+      } else {
+        recommendScoreInfo[visitorId] = 1;
       }
     });
-  }
 }
 
 function compare([id_A, score_A], [id_B, score_B]) {
